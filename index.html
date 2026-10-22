@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<meta name="description" content="Personal habit tracker that charts your consistency like a stock.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Momentum">
+<title>Momentum</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<section id="lock" class="lock" hidden>
+  <div class="lock-card">
+    <div class="brand"><span class="brand-mark">▲</span> Momentum</div>
+    <p class="lock-sub" id="lockSub">Your habits, charted like a stock.</p>
+
+    <form id="createForm" hidden>
+      <h2>Create your passphrase</h2>
+      <p class="muted small">It encrypts everything on this device. There is <strong>no reset</strong>: if you forget it, your data can't be recovered. Write it down somewhere safe.</p>
+      <label>Passphrase<input type="password" id="newPass" autocomplete="new-password" minlength="8" required></label>
+      <label>Confirm<input type="password" id="newPass2" autocomplete="new-password" minlength="8" required></label>
+      <button class="btn primary block" type="submit">Create &amp; start</button>
+      <button class="btn ghost block" type="button" id="restoreFirst">Restore from a backup file instead</button>
+    </form>
+
+    <form id="unlockForm" hidden>
+      <label>Passphrase<input type="password" id="unlockPass" autocomplete="current-password" required></label>
+      <button class="btn primary block" type="submit">Unlock</button>
+      <button class="btn link small" type="button" id="forgot">Forgot passphrase?</button>
+    </form>
+    <p class="error" id="lockError" role="alert"></p>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▲</span> Momentum</div>
+    <button class="icon-btn" id="lockBtn" title="Lock" aria-label="Lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+  </header>
+
+  <div id="backupBanner" class="banner" hidden>
+    <span id="backupBannerText">No backup yet.</span>
+    <button class="btn small" data-action="backup">Back up now</button>
+  </div>
+
+  <main>
+    <!-- CHART -->
+    <section class="view" id="view-chart">
+      <div class="ticker-row" id="tickerRow"></div>
+
+      <div class="quote">
+        <div>
+          <div class="quote-sym" id="quoteSym">INDEX</div>
+          <div class="quote-price" id="quotePrice">—</div>
+        </div>
+        <div class="quote-chg" id="quoteChg"></div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="intervalSeg">
+          <button data-v="D" class="on">Day</button><button data-v="W">Week</button><button data-v="M">Month</button>
+        </div>
+        <div class="seg" id="rangeSeg">
+          <button data-v="30">1M</button><button data-v="90" class="on">3M</button><button data-v="365">1Y</button><button data-v="0">All</button>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div id="chart"></div>
+        <div class="legend" id="legend"></div>
+        <div class="empty" id="chartEmpty" hidden>
+          <p><strong>No data yet.</strong></p>
+          <p class="muted">Add your first habit, then check it off on the Today tab. Your chart starts at 100.</p>
+          <button class="btn primary" data-goto="habits">Add a habit</button>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="card" id="dayDetail" hidden></div>
+
+      <div class="card" id="goalCards"></div>
+    </section>
+
+    <!-- TODAY -->
+    <section class="view" id="view-today" hidden>
+      <div class="daynav">
+        <button class="icon-btn" id="prevDay" aria-label="Previous day">‹</button>
+        <div class="daynav-title"><div id="dayTitle"></div><div class="muted small" id="daySub"></div></div>
+        <button class="icon-btn" id="nextDay" aria-label="Next day">›</button>
+      </div>
+
+      <h3 class="section-h">Planned</h3>
+      <ul class="habit-list" id="plannedList"></ul>
+
+      <h3 class="section-h" id="extraH">Extra credit <span class="muted small">(unplanned days earn half)</span></h3>
+      <ul class="habit-list" id="extraList"></ul>
+
+      <h3 class="section-h">Time blocks</h3>
+      <div class="card">
+        <ul class="blocks" id="blockList"></ul>
+        <form class="block-form" id="blockForm">
+          <select id="blockHabit" aria-label="Habit"></select>
+          <input type="time" id="blockStart" required aria-label="Start">
+          <input type="time" id="blockEnd" required aria-label="End">
+          <button class="btn small" type="submit">Add</button>
+        </form>
+        <div class="muted small" id="blockSummary"></div>
+      </div>
+
+      <h3 class="section-h">Notes</h3>
+      <div class="card">
+        <textarea id="dayNote" rows="5" placeholder="What happened today? What worked, what got in the way?"></textarea>
+        <div class="muted small" id="noteStatus">Saved automatically · encrypted</div>
+      </div>
+    </section>
+
+    <!-- HABITS -->
+    <section class="view" id="view-habits" hidden>
+      <div class="row-between">
+        <h2>Habits</h2>
+        <button class="btn primary small" id="newHabitBtn">+ New habit</button>
+      </div>
+      <ul class="manage-list" id="habitManageList"></ul>
+      <details class="muted small archived" id="archivedWrap" hidden>
+        <summary>Archived</summary>
+        <ul class="manage-list" id="archivedList"></ul>
+      </details>
+    </section>
+
+    <!-- GOALS -->
+    <section class="view" id="view-goals" hidden>
+      <div class="row-between">
+        <h2>Goals</h2>
+        <button class="btn primary small" id="newGoalBtn">+ New goal</button>
+      </div>
+      <p class="muted small">A goal is a target price by a date. Short-term goals are the trades; long-term goals are the portfolio. Each one appears as a line on its chart with a projection of when you'll hit it.</p>
+      <div id="goalList"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings" hidden>
+      <h2>Data &amp; security</h2>
+      <div class="card">
+        <h3>Backups</h3>
+        <p class="muted small" id="lastBackupText"></p>
+        <p class="small">Backups are encrypted with your current passphrase. Save them to Google Drive, iCloud, or email them to yourself.</p>
+        <div class="btn-row">
+          <button class="btn primary" data-action="backup">Download backup</button>
+          <button class="btn" id="restoreBtn">Restore from backup</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Export (unencrypted)</h3>
+        <p class="small muted">Readable copies for spreadsheets or other tools. Anyone who opens these can read them.</p>
+        <div class="btn-row">
+          <button class="btn" id="exportCsv">Completions CSV</button>
+          <button class="btn" id="exportJson">Full JSON</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Passphrase</h3>
+        <form id="passForm" class="stack">
+          <input type="password" id="curPass" placeholder="Current passphrase" autocomplete="current-password" required>
+          <input type="password" id="nextPass" placeholder="New passphrase (8+ characters)" minlength="8" autocomplete="new-password" required>
+          <button class="btn" type="submit">Change passphrase</button>
+        </form>
+        <p class="small muted">The app locks itself after 10 minutes in the background.</p>
+      </div>
+      <div class="card">
+        <h3>How your price moves</h3>
+        <ul class="small rules" id="rulesList"></ul>
+      </div>
+      <p class="muted small center">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts</a> · v<span id="appVersion"></span></p>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="chart" class="on"><svg viewBox="0 0 24 24"><path d="M6 4v16M12 7v10M18 3v14"/><rect x="4" y="8" width="4" height="7"/><rect x="10" y="9" width="4" height="5"/><rect x="16" y="5" width="4" height="8"/></svg>Chart</button>
+    <button data-tab="today"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 15l3 3 5-6"/></svg>Today</button>
+    <button data-tab="habits"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Habits</button>
+    <button data-tab="goals"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Goals</button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>Data</button>
+  </nav>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json,.momentum,application/json" hidden>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="lightweight-charts.js"></script>
+<script src="engine.js"></script>
+<script src="vault.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
